@@ -1,0 +1,246 @@
+ALTER TABLE proj_table 
+RENAME COLUMN project_id to proj_id;
+ALTER TABLE proj_table 
+MODIFY COLUMN proj_id varchar(10);
+ALTER TABLE proj_table
+ADD PRIMARY KEY (proj_id);
+ALTER TABLE proj_table
+MODIFY COLUMN proj_name varchar (100);
+ALTER TABLE proj_table
+MODIFY COLUMN domain varchar (50);
+ALTER TABLE proj_table
+MODIFY COLUMN start_date datetime;
+ALTER TABLE proj_table
+MODIFY COLUMN closure_date datetime; 
+ALTER TABLE proj_table 
+MODIFY COLUMN dev_qtr varchar (2);
+ALTER TABLE proj_table
+MODIFY COLUMN status varchar (10);
+
+ALTER TABLE emp_record_table
+MODIFY COLUMN emp_id varchar (10);
+ALTER TABLE emp_record_table
+MODIFY COLUMN first_name varchar (25);
+ALTER TABLE emp_record_table
+MODIFY COLUMN last_name varchar (25);
+ALTER TABLE emp_record_table
+MODIFY COLUMN gender varchar (1);
+ALTER TABLE emp_record_table
+MODIFY COLUMN role varchar (50);
+ALTER TABLE emp_record_table
+MODIFY COLUMN dept varchar (25);
+ALTER TABLE emp_record_table
+MODIFY COLUMN country varchar (25);
+ALTER TABLE emp_record_table
+MODIFY COLUMN continent varchar (25);
+ALTER TABLE emp_record_table
+MODIFY COLUMN manager_id varchar (10);
+ALTER TABLE emp_record_table
+MODIFY COLUMN proj_id varchar (10);
+ALTER TABLE emp_record_table
+ADD constraint fk_proj_id FOREIGN KEY (proj_id) references proj_table(proj_id);
+
+ALTER TABLE data_science_team
+MODIFY COLUMN emp_id varchar (10); 
+ALTER TABLE data_science_team
+ADD PRIMARY KEY (emp_id);
+ALTER TABLE data_science_team
+MODIFY COLUMN first_name varchar (25);
+ALTER TABLE data_science_team
+MODIFY COLUMN last_name varchar(25);
+ALTER TABLE data_science_team
+MODIFY COLUMN gender varchar (1);
+ALTER TABLE data_science_team
+MODIFY COLUMN role varchar (50);
+ALTER TABLE data_science_team
+MODIFY COLUMN dept varchar (25);
+ALTER TABLE data_science_team
+MODIFY COLUMN country varchar (25);
+ALTER TABLE data_science_team
+MODIFY COLUMN continent varchar (25);
+ALTER TABLE data_science_team
+ADD constraint fk_emp_id foreign key (emp_id) references emp_record_table(emp_id);
+
+SELECT * FROM proj_table;
+SELECT * FROM emp_record_table;
+SELECT * FROM data_science_team;
+
+#3. 
+SELECT
+emp_id, 
+first_name, 
+last_name, 
+gender, 
+dept
+FROM emp_record_table;
+
+#4. 
+SELECT 
+emp_id, 
+first_name, 
+last_name, 
+gender, 
+dept, 
+emp_rating
+FROM emp_record_table
+WHERE emp_rating < 2;
+
+SELECT 
+emp_id, 
+first_name, 
+last_name, 
+gender, 
+dept,
+emp_rating
+FROM emp_record_table
+WHERE emp_rating > 4;
+
+SELECT 
+emp_id,
+first_name,
+last_name, 
+gender, 
+dept, 
+emp_rating
+FROM emp_record_table
+WHERE emp_rating BETWEEN 2 AND 4;
+
+#5. 
+SELECT
+concat(first_name, ' ' , last_name) AS 'Name',
+dept
+FROM emp_record_table
+WHERE dept = 'FINANCE';
+
+#6. 
+SELECT * FROM emp_record_table;
+SELECT 
+	m.first_name,
+	m.last_name,
+	m.role, 
+	m.dept,
+	count(e.emp_id) AS 'direct_reports'
+FROM emp_record_table m
+INNER JOIN emp_record_table e ON e.emp_id = m.manager_id
+GROUP BY m.first_name, m.last_name, m.dept, m.role, m.emp_id
+HAVING count(e.emp_id) > 0;
+
+SELECT 
+	e.first_name,
+	e.last_name,
+	e.role, 
+	e.dept,
+	count(m.emp_id) AS 'direct_reports'
+FROM emp_record_table e
+INNER JOIN emp_record_table m ON e.emp_id = m.manager_id
+GROUP BY e.first_name, e.last_name, e.dept, e.role, e.emp_id
+HAVING count(m.emp_id) > 0;
+
+#7. 
+SELECT first_name, last_name, dept FROM emp_record_table WHERE dept = 'healthcare'
+UNION
+SELECT first_name, last_name, dept FROM emp_record_table WHERE dept = 'finance';
+
+#8. 
+SELECT
+emp_id,
+first_name,
+last_name, 
+role, 
+dept, 
+emp_rating,
+max(emp_rating) over (partition by dept) AS 'max_emp_rating'
+FROM emp_record_table;
+
+#9. 
+SELECT
+role, 
+min(salary) AS 'min_salary',
+max(salary) AS 'max_salary'
+FROM emp_record_table
+GROUP BY role;
+
+#10.
+SELECT 
+	emp_id, 
+    first_name,
+    last_name, 
+    role, 
+    dept,
+    exp,
+DENSE_RANK() OVER (PARTITION BY dept ORDER BY exp)
+FROM emp_record_table;
+
+#11. 
+SELECT
+emp_id, 
+first_name,
+last_name, 
+role, 
+dept, 
+country,
+salary
+FROM emp_record_table
+WHERE salary > 6000
+ORDER BY salary DESC;
+
+#12. 
+SELECT m.first_name, m.last_name, m.dept, m.exp 
+FROM emp_record_table m
+WHERE EXISTS (SELECT 1 FROM emp_record_table WHERE exp > 10) AND m.exp > 10;
+
+#13. 
+SELECT 
+emp_id, 
+first_name, 
+last_name, 
+role, 
+dept, 
+exp
+FROM emp_record_table
+WHERE exp > 10;
+
+#14. 
+DELIMITER //
+CREATE FUNCTION GetJobProfile(exp INT) RETURNS VARCHAR (200) DETERMINISTIC
+BEGIN 
+	DECLARE JobProfile VARCHAR (200);
+    IF exp <= 2 THEN 
+		SET JobProfile = 'Junior Data Scientist';
+    ELSEIF exp BETWEEN 2 AND 5 THEN 
+		SET JobProfile = 'Associate Data Scientist';
+	ELSEIF exp BETWEEN 5 AND 10 THEN 
+		SET JobProfile = 'Senior Data Scientist';
+	ELSEIF exp BETWEEN 10 AND 12 THEN 
+		SET JobProfile = 'Lead Data Scientist';
+	ELSEIF exp BETWEEN 12 AND 16 THEN 
+		SET JobProfile = 'Manager';
+	ELSE
+		SET JobProfile = 'Unknown';
+	END IF; 
+    RETURN JobProfile;
+END //
+DELIMITER ;
+SELECT first_name, last_name, role, exp, GetJobProfile(exp) AS 'job_profile'
+FROM data_science_team
+ORDER BY role;
+
+#15. 
+CREATE INDEX index_FirstName
+ON emp_record_table (first_name);
+
+#16. 
+SELECT 
+emp_id, 
+first_name, 
+last_name, 
+role, 
+emp_rating, 
+(.05 * salary * emp_rating) AS 'bonus'
+FROM emp_record_table;
+
+#17.
+SELECT *, 
+avg(salary) over (partition by country) AS 'salary_within_country',
+avg(salary) over (partition by continent) AS 'salary_within_continent'
+FROM emp_record_table;
